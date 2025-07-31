@@ -4,8 +4,20 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-anyhow = "1"
+memmap2 = "0.9"
+rayon = "1.5"
+zip = "0.6"
+num_cpus = "1.17"
+anyhow = "1.0"
 log = "0.4"
 env_logger = "0.11"
+makepad-widgets = "1"
+
 [dev-dependencies]
 tempfile = "3"
+
+[profile.dev.package.huge-mostly-unused-dependency]
+hint-mostly-unused = true
+
+[profile.release.package.huge-mostly-unused-dependency]
+hint-mostly-unused = true

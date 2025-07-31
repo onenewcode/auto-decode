@@ -3,26 +3,23 @@ use std::collections::HashMap;
 use std::fs;
 use std::{fs::File, path::Path};
 
-
-
-// 假设 rename_file 函数签名如下（根据上下文推断）：
-// fn rename_file(path: &Path, rename_hash: &HashMap<String, String>) -> Result<File> { ... }
+pub mod extractor;
 
 pub fn get_file_handles<P: AsRef<Path>>(
     path: P,
     rename_hash: &HashMap<String, String>,
 ) -> Result<Vec<File>> {
     let path = path.as_ref();
-    let metadata = fs::metadata(path)
-        .with_context(|| format!("无法获取路径 {} 的元数据", path.display()))?;
+    let metadata =
+        fs::metadata(path).with_context(|| format!("无法获取路径 {} 的元数据", path.display()))?;
 
     if metadata.is_file() {
         // 单个文件：直接处理并包装成 Vec
         rename_file(path, rename_hash).map(|file| vec![file])
     } else if metadata.is_dir() {
         // 处理目录：收集所有文件结果
-        let entries = fs::read_dir(path)
-            .with_context(|| format!("无法读取目录 {}", path.display()))?;
+        let entries =
+            fs::read_dir(path).with_context(|| format!("无法读取目录 {}", path.display()))?;
 
         let mut files = Vec::new();
         for entry in entries {
@@ -75,7 +72,7 @@ mod tests {
     use std::collections::HashMap;
     use std::fs::{self, File};
     use std::io::Write;
-    use tempfile::tempdir;
+    use tempfile::{NamedTempFile, tempdir};
 
     #[test]
     fn test_rename_with_extension_in_map() -> anyhow::Result<()> {
@@ -100,5 +97,28 @@ mod tests {
         assert_eq!(content.trim(), "content");
 
         Ok(())
+    }
+    #[test]
+    fn test_directory_path() {
+        // 创建临时目录
+        let dir = tempdir().unwrap();
+        let dir_path = dir.path();
+
+        // 创建3个文件
+        for i in 1..=3 {
+            let file_path = dir_path.join(format!("file{}.txt", i));
+            let mut f = File::create(&file_path).unwrap();
+            writeln!(f, "文件{}内容", i).unwrap();
+        }
+
+        // 创建一个子目录（不应被包含）
+        fs::create_dir(dir_path.join("subdir")).unwrap();
+
+        let rename_map = HashMap::new();
+        let result = get_file_handles(dir_path, &rename_map);
+
+        assert!(result.is_ok());
+        let files = result.unwrap();
+        assert_eq!(files.len(), 3);
     }
 }
